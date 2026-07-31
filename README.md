@@ -1,6 +1,6 @@
-# Personal tech stack
+# Personal Cloud
 
-A high level overview of my personal tech stack.
+A high-level, aspirational overview of my personal cloud — the self-hosted AI and automation ecosystem I'm steering towards.
 
 ## Systems
 
