@@ -2,6 +2,62 @@
 
 A high-level, aspirational overview of my personal cloud — the self-hosted AI and automation ecosystem I'm steering towards.
 
+## Overview
+
+```mermaid
+flowchart TD
+    %% Surfaces I interact with
+    CC[Claude Code]
+    VoiceShared([Shared voice satellites])
+    VoicePersonal([Personal voice satellite])
+
+    %% Home Assistant instances
+    HAShared[Home Assistant<br/>Shared]
+    HAPersonal[Home Assistant<br/>Personal]
+
+    %% Agents — both run on the Chives stack
+    subgraph Chives["Chives stack"]
+        Nabu[Nabu<br/>House Agent]
+        Jarvis[Jarvis<br/>Personal Agent]
+    end
+
+    %% LLM runtime
+    Ollama[Ollama<br/>Mac Mini · OpenAI-compatible]
+    OllamaCloud[(Ollama Cloud)]
+
+    %% Gateway + the services it proxies
+    Gateway[Gateway<br/>CLI · MCP · API]
+    SearchMCP[Search MCP]
+    subgraph Services["Services proxied by Gateway"]
+        Reminders[Reminders]
+        Bookmarks[Bookmarks]
+        Issues[Issues]
+        Calendar[Calendar]
+        Email[Email]
+        Site[Personal Site]
+        Geo[Geolocation]
+        Mastodon[Mastodon]
+        Photos[Photos]
+        Weather[Weather]
+        SearXNG[Search / SearXNG]
+    end
+
+    %% Wiring
+    VoiceShared --> HAShared
+    VoicePersonal --> HAPersonal
+    HAShared -->|conversation · image| Nabu
+    HAPersonal -->|conversation| Jarvis
+    Nabu --> Ollama
+    Nabu --> SearchMCP
+    Jarvis --> Ollama
+    Jarvis --> Gateway
+    Ollama --> OllamaCloud
+    CC --> Gateway
+    CC -.-> HAShared
+    CC -.-> HAPersonal
+    Gateway --> Services
+```
+
 ## Systems
 
 ### Gateway
