@@ -29,17 +29,10 @@ flowchart TD
     Gateway[Gateway<br/>CLI · MCP · API]
     SearchMCP[Search MCP]
     subgraph Services["Services proxied by Gateway"]
-        Reminders[Reminders]
-        Bookmarks[Bookmarks]
-        Issues[Issues]
-        Calendar[Calendar]
-        Email[Email]
-        Site[Personal Site]
-        Geo[Geolocation]
-        Mastodon[Mastodon]
-        Photos[Photos]
-        Weather[Weather]
-        SearXNG[Search / SearXNG]
+        direction LR
+        Reminders[Reminders] ~~~ Bookmarks[Bookmarks] ~~~ Issues[Issues] ~~~ Calendar[Calendar]
+        Email[Email] ~~~ Site[Personal Site] ~~~ Geo[Geolocation] ~~~ Mastodon[Mastodon]
+        Photos[Photos] ~~~ Weather[Weather] ~~~ SearXNG[Search / SearXNG]
     end
 
     %% Wiring
