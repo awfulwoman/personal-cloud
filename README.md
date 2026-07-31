@@ -1,6 +1,6 @@
 # Personal Cloud
 
-A high-level, aspirational overview of my personal cloud — the self-hosted AI and automation ecosystem I'm steering towards.
+A high-level, aspirational overview of my personal cloud - the self-hosted personal automation ecosystem I'm steering towards.
 
 ## Overview
 
