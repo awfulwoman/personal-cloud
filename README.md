@@ -26,7 +26,7 @@ flowchart TD
     OllamaCloud[(Ollama Cloud)]
 
     %% Gateway + the services it proxies
-    Gateway[Gateway<br/>CLI · MCP · API]
+    Gateway[Gateway<br/>CLI · MCP streamable-http · API]
     SearchMCP[Search MCP]
     subgraph Services["Services proxied by Gateway"]
         direction LR
@@ -43,9 +43,9 @@ flowchart TD
     Nabu --> Ollama
     Nabu --> SearchMCP
     Jarvis --> Ollama
-    Jarvis --> Gateway
+    Chives -->|MCP HTTP · proxies all Gateway tools| Gateway
     Ollama --> OllamaCloud
-    CC --> Gateway
+    CC -->|MCP HTTP| Gateway
     CC -.-> HAShared
     CC -.-> HAPersonal
     Gateway --> Services
@@ -57,7 +57,9 @@ flowchart TD
 
 Presents a proxy interface for many other services, in the form of CLI, MCP, and API.
 
-Will soon have authentication and authorisationh layers that allows it to be used by various systems in different ways.
+The MCP interface is served over streamable-http (`http://host:4000/mcp`). Clients register with `claude mcp add --transport http`, rather than the old SSE endpoint or hand-edited config.
+
+Will soon have authentication and authorisation layers that allow it to be used by various systems in different ways.
 
 - Reminders (Apple Reminders)
 - Bookmarks (Karakeep)
@@ -89,11 +91,11 @@ Makes use of Nabu, the house agent.
 
 ### Nabu - House Agent
 
-An always on agent that is powered by Ollama and connected a search MCP (and any other MCPs as needed).
+An always on agent that is powered by Ollama and connected to a search MCP (and any other MCPs as needed).
 
 Home Assistant connects to this and makes use of it for the conversational and image capabilities.
 
-Uses the Chives stack.
+Uses the Chives stack, so it reaches calendar, reminders, contacts, email and the rest by proxying Gateway's tools over MCP HTTP rather than implementing them locally.
 
 ### Jarvis - Personal Agent
 
@@ -101,11 +103,11 @@ An always on looping agent that is powered by Ollama and connected to Gateway.
 
 Home Assistant Personal connects and makes use of this for the conversational capabilities.
 
-Uses the Chives stack.
+Uses the Chives stack. The stack discovers and proxies all of Gateway's tools over MCP HTTP at startup, so Jarvis gets the full Gateway tool set (search, update, delete variants included) without its own pyobjc or IMAP dependencies.
 
 ### Home Assistant - Personal
 
-A seperate home assistant instance that connects to a single voice satellite.
+A separate home assistant instance that connects to a single voice satellite.
 
 Used by me for all the things that Gateway provides.
 
