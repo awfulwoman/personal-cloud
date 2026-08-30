@@ -30,7 +30,7 @@ flowchart TD
     SearchMCP[Search MCP]
     subgraph Services["Services proxied by Gateway"]
         direction LR
-        Reminders[Reminders] ~~~ Bookmarks[Bookmarks] ~~~ Issues[Issues] ~~~ Calendar[Calendar]
+        Reminders[Reminders] ~~~ Bookmarks[Bookmarks] ~~~ Issues[Issues<br/>GitHub · awfulwoman/meta] ~~~ Calendar[Calendar]
         Email[Email] ~~~ Site[Personal Site] ~~~ Geo[Geolocation] ~~~ Mastodon[Mastodon]
         Photos[Photos] ~~~ Weather[Weather] ~~~ SearXNG[Search / SearXNG]
     end
@@ -63,7 +63,7 @@ Will soon have authentication and authorisation layers that allow it to be used 
 
 - Reminders (Apple Reminders)
 - Bookmarks (Karakeep)
-- Issues
+- Issues (GitHub issues in a single repo, default `awfulwoman/meta`, via the GitHub REST API)
 - Calendar (Apple Calendar)
 - Email (IMAP)
 - Personal Site
