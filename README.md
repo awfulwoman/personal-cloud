@@ -40,6 +40,7 @@ flowchart TD
         Calendar[Calendar] ~~~ Reminders[Reminders] ~~~ Contacts[Contacts]
         Email[Email<br/>mail-archive-server] ~~~ Notes[Obsidian Notes] ~~~ Bookmarks[Bookmarks]
         Geo[Geolocation] ~~~ Issues[Issues<br/>GitHub · awfulwoman/meta]
+        Posts[Site drafts<br/>micropub-server] ~~~ Webmentions[Webmentions<br/>webmention-server]
     end
 
     %% Direct MCPs used by Hermes-Jarvis only
@@ -89,10 +90,12 @@ Will soon have authentication and authorisation layers that allow it to be used 
 - Bookmarks (Karakeep)
 - Issues (GitHub issues in a single repo, default `awfulwoman/meta`, via the GitHub REST API)
 - Geolocation (OwnTracks)
+- Site drafts (draft posts on awfulwoman.com via [micropub-server](https://github.com/awfulwoman/micropub-server); publishing and deleting stay in its web UI)
+- Webmentions (review what other sites have sent, and send for a post, via [webmention-server](https://github.com/awfulwoman/webmention-server); approving, rejecting and sending only, never trusting, blocking or deleting)
 
 The three Apple-backed services run natively on Malcolm (the always-on Mac), since EventKit and the Contacts framework are macOS-only and need a logged-in GUI session for the permission grant. Everything else runs in the Gateway container itself.
 
-Personal Site, Mastodon, Photos, Weather, and Search were on this list in an earlier draft of this document but were never built into Gateway — Weather and Search instead ended up as their own standalone MCP servers (see below), and the rest remain unbuilt.
+Mastodon, Photos, Weather, and Search were on this list in an earlier draft of this document but were never built into Gateway — Weather and Search instead ended up as their own standalone MCP servers (see below), and the rest remain unbuilt. (The personal site did arrive later, as draft posts and Webmentions above.)
 
 ### Ollama
 
@@ -144,6 +147,15 @@ Same `ha-openai-compatible` wiring as above, pointed at the personal-agent ident
 Agent harness from Anthropic.
 
 Connects to Gateway and Home Assistant.
+
+### Personal site: micropub-server and webmention-server
+
+Two small services sit around the static site (Hugo, [awfulwoman.com](https://awfulwoman.com)), both on the public VPS:
+
+- **micropub-server** takes posts from any Micropub client and commits them to the site's repo, then shares them to Mastodon (GoToSocial) and Bluesky. It is also the IndieAuth server the other service signs in through.
+- **webmention-server** receives Webmentions (replies, likes and reposts from other sites) and sends them for the site's own posts. Nothing shows on the site until it is approved. The site's pages fetch approved mentions in the browser, so they cost the build nothing. It tells Home Assistant when something needs review.
+
+Both are reachable from Gateway (above) for drafting and reviewing from a chat.
 
 ## Notes
 
