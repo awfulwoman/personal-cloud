@@ -91,7 +91,7 @@ Will soon have authentication and authorisation layers that allow it to be used 
 - Issues (GitHub issues in a single repo, default `awfulwoman/meta`, via the GitHub REST API)
 - Geolocation (OwnTracks)
 - Site drafts (draft posts on awfulwoman.com via [micropub-server](https://github.com/awfulwoman/micropub-server); publishing and deleting stay in its web UI)
-- Webmentions (review what other sites have sent, and send for a post, via [webmention-server](https://github.com/awfulwoman/webmention-server); approving, rejecting and sending only, never trusting, blocking or deleting)
+- Webmentions (review what other sites have sent, and send for a post, via [webmention-server](https://github.com/awfulwoman/webmention-server); rejecting and sending only: approving stays with the owner, since a stranger's text reaches the agent, and it never trusts, blocks or deletes)
 
 The three Apple-backed services run natively on Malcolm (the always-on Mac), since EventKit and the Contacts framework are macOS-only and need a logged-in GUI session for the permission grant. Everything else runs in the Gateway container itself.
 
