@@ -2,6 +2,8 @@
 
 A high-level, aspirational overview of my personal cloud - the self-hosted personal automation ecosystem I'm steering towards.
 
+Last reviewed: 2026-10-25.
+
 ## Overview
 
 ```mermaid
@@ -16,8 +18,9 @@ flowchart TD
     HAShared[Home Assistant<br/>Shared]
     HAPersonal[Home Assistant<br/>Personal]
 
-    %% Two parallel agent stacks, both answering to the Nabu/Jarvis wake words
-    subgraph Chives["Chives stack — Telegram"]
+    %% Two agent stacks, both answering to the Nabu/Jarvis wake words.
+    %% Hermes is current; Chives is legacy and still running until retired.
+    subgraph Chives["Chives stack (legacy) — Telegram"]
         CNabu[Nabu]
         CJarvis[Jarvis]
     end
@@ -26,13 +29,17 @@ flowchart TD
         HNabu[Hermes-Nabu]
         HJarvis[Hermes-Jarvis]
     end
+    Matrix[(Matrix homeserver)]
+
+    %% Consumers of Gateway data
+    WikiCompiler[wiki-compiler] --> WikiSite([wiki-site<br/>Quartz])
 
     %% LLM runtime
     Ollama[Ollama<br/>Mac Mini Malcolm · OpenAI-compatible]
     OllamaCloud[(Ollama Cloud)]
 
     %% Gateway + the services it proxies
-    Gateway[Gateway<br/>CLI · MCP streamable-http · API]
+    Gateway[Gateway<br/>CLI · MCP streamable-http · API<br/>per-client bearer tokens]
     SearchMCP[Search MCP<br/>SearXNG · Kagi]
     WeatherMCP[Weather MCP]
     subgraph Services["Services proxied by Gateway"]
@@ -61,10 +68,12 @@ flowchart TD
     Hermes --> Ollama
     Chives -->|MCP HTTP· proxies Gateway tools| Gateway
     Chives --> WeatherMCP
+    Chives --> SearchMCP
+    Hermes --> Matrix
     HJarvis -->|MCP HTTP| Gateway
     HJarvis --> WeatherMCP
     HJarvis --> JarvisTools
-    CNabu --> SearchMCP
+    WikiCompiler -->|MCP HTTP| Gateway
     Ollama --> OllamaCloud
     CC -->|MCP HTTP| Gateway
     CC -.-> HAShared
@@ -80,7 +89,7 @@ Presents a proxy interface for many other services, in the form of CLI, MCP, and
 
 The MCP interface is served over streamable-http (`http://host:4000/mcp`). Clients register with `claude mcp add --transport http`, rather than the old SSE endpoint or hand-edited config.
 
-Will soon have authentication and authorisation layers that allow it to be used by various systems in different ways.
+Each caller has its own bearer token on `/mcp` (Claude Code, the laptop, `gw` CLI, Hermes, Chives-Jarvis, wiki-compiler). The token's label names the caller in a per-request usage log. Per-client authorisation (different tool sets for different callers) is not built yet. [Authentik](#authentik) now runs on storage, but Gateway does not use it.
 
 - Calendar (real Apple Calendar via [apple-calendar-server](https://github.com/awfulwoman/apple-calendar-server) — replaced Google Calendar)
 - Reminders (real Apple Reminders via [apple-reminders-server](https://github.com/awfulwoman/apple-reminders-server) — replaced Radicale)
@@ -107,24 +116,42 @@ Used by both agent stacks below.
 
 Allows access to cloud-based models via Ollama.
 
-### Chives stack (Nabu · Jarvis)
+### Chives stack (Nabu · Jarvis) — legacy
+
+**Superseded by the Hermes stack below.** It still runs, but no new work goes into it. When it is retired, remove the `nabu`/`jarvis` compositions and the `jarvis` Gateway token. Then the `hermes-` prefix (see below) is no longer needed.
 
 The original agent stack: [Chives](https://github.com/awfulwoman/chives), a local-first Python agent talking to Ollama and reaching Gateway's tools by proxying them over MCP HTTP. Runs as two Telegram bots, `nabu` and `jarvis`, deployed on `server-64gb-storage`. Each is its own container with its own Telegram token, memory, and scheduled nudges.
 
-Also has the Home Assistant MCP and a weather MCP wired in, so it can act on Home Assistant state and answer weather questions directly, not just through Gateway.
+Also has the Home Assistant MCP, the SearXNG search MCP and the weather MCP wired in.
 
 ### Hermes stack (Hermes-Nabu · Hermes-Jarvis)
 
-A newer, parallel agent stack: [Hermes Agent](https://github.com/NousResearch/hermes-agent), a self-hosted agent from Nous Research, run as one container per identity (`hermes-nabu`, `hermes-jarvis`) on `minipc-8gb-agatha`. Talks to the same Ollama endpoint on Malcolm. Chat happens over Matrix rather than Telegram, and each container exposes its own OpenAI-compatible API (port 8642) so other systems — Home Assistant, Open WebUI — can drive it directly.
+The current agent stack: [Hermes Agent](https://github.com/NousResearch/hermes-agent), a self-hosted agent from Nous Research, run as one container per identity (`hermes-nabu`, `hermes-jarvis`) on `minipc-8gb-agatha`. Talks to the same Ollama endpoint on Malcolm. Chat happens over Matrix rather than Telegram (each bot has its own account on the self-hosted homeserver on `server-64gb-storage`), and each container exposes its own OpenAI-compatible API (port 8642) so other systems — Home Assistant, Open WebUI — can drive it directly.
 
 The two identities have very different tool access:
 
 - **Hermes-Nabu** (house agent) — only the Home Assistant MCP.
-- **Hermes-Jarvis** (general assistant) — the Gateway MCP (full tool set), the Home Assistant MCP, a weather MCP, GitHub's hosted MCP server (via a dedicated helperbot account, for forking public repos and opening PRs/issues), and n8n's instance MCP.
+- **Hermes-Jarvis** (general assistant) — the Gateway MCP (full tool set), the Home Assistant MCP, a weather MCP, GitHub's hosted MCP server (via a dedicated helperbot account, for forking public repos and opening PRs/issues), and the MCP of the self-hosted [n8n](#n8n) instance.
 
 An earlier single multi-profile `hermes-agent` container ran both identities as Hermes "profiles," but profiles share one process environment — all of them ended up authenticating to Matrix as the same account (an acknowledged upstream bug). Splitting into one container per identity fixed that.
 
 `hermes-nabu`/`hermes-jarvis`, rather than plain `nabu`/`jarvis`, because the Chives stack already owns those composition names and subdomains — the two stacks are unrelated but collide on naming, both having been built around the same `nabu`/`jarvis` Home Assistant wake words.
+
+### Standalone MCP servers
+
+All on `server-64gb-storage`, outside Gateway:
+
+- **Search** — `mcp-searxng` (self-hosted SearXNG) and `mcp-kagisearch` (Kagi).
+- **Weather** — `mcp-weather`.
+- **OpenZIM** — `openzim-mcp`, offline reference content (Wikipedia and similar) from the same ZIM library that Kiwix serves.
+
+### n8n
+
+Workflow automation on `server-64gb-storage`. Hermes-Jarvis and Claude Code reach it through its instance MCP to build and run workflows.
+
+### Matrix
+
+Self-hosted homeserver on `server-64gb-storage`. The chat surface for the Hermes stack.
 
 ### Open WebUI
 
@@ -146,7 +173,19 @@ Same `ha-openai-compatible` wiring as above, pointed at the personal-agent ident
 
 Agent harness from Anthropic.
 
-Connects to Gateway and Home Assistant.
+Connects to Gateway and Home Assistant. Sessions run on `minipc-8gb-camina` by default, with Malcolm as a break-glass fallback.
+
+### Wiki: wiki-compiler and wiki-site
+
+[wiki-compiler](https://github.com/awfulwoman/wiki-compiler) compiles the Obsidian vault and Gateway's data (calendar, bookmarks, contacts, reminders, location) into an Obsidian-compatible wiki that an LLM maintains, with a citation on every fact. It reads Gateway through its own token. wiki-site serves the result as a static [Quartz](https://quartz.jzhao.xyz) site behind basic auth. wiki-compiler is the only writer. Both run on `server-64gb-storage`.
+
+### translation-server
+
+[translation-server](https://github.com/awfulwoman/translation-server) translates documents (mostly German → English) with translategemma on Malcolm's Ollama. It has a DeepL v2-compatible API and a LAN web UI. A second container takes Paperless-ngx workflow webhooks and adds a linked English companion to each document. Internal only, on `server-64gb-storage`.
+
+### Authentik
+
+SSO on `server-64gb-storage`. Each OIDC app is defined as a blueprint from infra. Immich uses it now. More apps are to follow, possibly Gateway.
 
 ### Personal site: micropub-server and webmention-server
 
@@ -157,10 +196,24 @@ Two small services sit around the static site (Hugo, [awfulwoman.com](https://aw
 
 Both are reachable from Gateway (above) for drafting and reviewing from a chat.
 
+### Ops
+
+Not in the diagram. Each ZFS host runs [zfs-api](https://github.com/awfulwoman/zfs-api) (read-only pool, snapshot and backup status, with Prometheus metrics). VictoriaMetrics scrapes it. Gatus does health checks, and Loki and Logtide collect logs. Alerts go to Home Assistant, not email.
+
+## Hosts
+
+| Host | Role in this map |
+| --- | --- |
+| `server-64gb-storage` | Most services: Gateway, mail-archive-server, Matrix, n8n, Authentik, standalone MCPs, wiki-compiler/wiki-site, translation-server, Chives stack, Karakeep, Paperless-ngx |
+| `apple-macmini-m4-16gb-malcolm` | Ollama, apple-calendar/contacts/reminders-server (native macOS); break-glass Claude Code host |
+| `minipc-8gb-agatha` | Hermes stack, Open WebUI |
+| `minipc-8gb-camina` | Default Claude Code host; Syncthing (Obsidian vaults), basic-memory, Wiki.js |
+| `vps-hetzner-public01` | micropub-server, webmention-server |
+
 ## Notes
 
-Jarvis and Nabu (and now Hermes-Jarvis and Hermes-Nabu) are only used because they are hardcoded as wake words in the Home Assistant voice satellites — hence two unrelated agent stacks both being built around the same two names.
+Jarvis and Nabu (and Hermes-Jarvis and Hermes-Nabu) are only used because they are hardcoded as wake words in the Home Assistant voice satellites. That is why two unrelated agent stacks have the same two names.
 
 ## Emerging
 
-- **[wiki-compiler](https://github.com/awfulwoman/wiki-compiler)** — not yet deployed. Will compile the Obsidian vault and Gateway's data (calendar, bookmarks, contacts, reminders, location) into an Obsidian-compatible wiki that an LLM maintains, with a citation on every fact. Currently at the milestone-1 design/spec stage.
+- **webmention-server phase 5** — specced, not built. A poller that collects replies and likes from GoToSocial for syndicated posts (backfeed), so Bridgy is only needed for Bluesky.
